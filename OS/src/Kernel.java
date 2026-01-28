@@ -1,6 +1,12 @@
 public class Kernel extends Process  {
+    private Scheduler scheduler;
     public Kernel(UserlandProcess[] startup) {
-	// implement here	
+	// implement here
+        scheduler = new Scheduler();
+        for(var result: startup) {
+            PCB pcb = new PCB(result, OS.PriorityType.interactive);
+            scheduler.addProcess(pcb);
+        }
     }
 
     @Override
@@ -8,34 +14,37 @@ public class Kernel extends Process  {
             while (true) { // Warning on infinite loop is OK...
                 switch (OS.currentCall) { // get a job from OS, do it
                     case SwitchProcess -> SwitchProcess();
-                    /*
-                    // Priority Schduler
+
+                    // Priority Scheduler
                     case Exit -> Exit();
                     case CreateProcess ->  // Note how we get parameters from OS and set the return value
                             OS.retVal = CreateProcess((UserlandProcess) OS.parameters.get(0), (OS.PriorityType) OS.parameters.get(1));
-                    case Sleep -> Sleep((int) OS.parameters.get(0));
+                    case Sleep -> Sleep((int) OS.parameters.get(0)); //Change cast type to "Integer" if it fails.
                     case GetPID -> OS.retVal = GetPid();
                     // Devices
-                    case Open ->
-                    case Close ->
-                    case Read ->
-                    case Seek ->
-                    case Write ->
+                    case Open -> OS.retVal = Open((String) OS.parameters.get(0));
+                    case Close -> Close((int) OS.parameters.get(0)); //Change cast type to "Integer" if it fails.
+                    case Read -> OS.retVal = Read((int) OS.parameters.get(0), (int) OS.parameters.get(1)); //Change cast type to "Integer" if it fails.
+                    case Seek -> Seek((int) OS.parameters.get(0), (int) OS.parameters.get(1)); //Change cast type to "Integer" if it fails.
+                    case Write -> OS.retVal = Write((int) OS.parameters.get(0), (byte[]) OS.parameters.get(1)); //Change cast type to "Integer" if it fails.
                     // Messages
-                    case GetPIDByName ->
-                    case SendMessage ->
-                    case WaitForMessage ->
+                    case GetPIDByName -> OS.retVal = GetPidByName((String) OS.parameters.get(0));
+                    case SendMessage -> SendMessage((KernelMessage) OS.parameters.get(0));
+                    case WaitForMessage -> OS.retVal = WaitForMessage();
                     // Memory
-                    case GetMapping ->
-                    case AllocateMemory ->
-                    case FreeMemory ->
-                     */
+                    case GetMapping -> GetMapping((int) OS.parameters.get(0)); //Change cast type to "Integer" if it fails.
+                    case AllocateMemory -> OS.retVal = AllocateMemory((int) OS.parameters.get(0)); //Change cast type to "Integer" if it fails.
+                    case FreeMemory -> OS.retVal = FreeMemory((int) OS.parameters.get(0), (int) OS.parameters.get(1)); //Change cast type to "Integer" if it fails.
                 }
                 // TODO: Now that we have done the work asked of us, start some process then go to sleep.
+                scheduler.currentlyRunning.start();
+                this.stop();
             }
     }
 
-    private void SwitchProcess() {}
+    private void SwitchProcess() {
+        scheduler.SwitchProcess();
+    }
 
     private void Exit() {
     }
@@ -69,7 +78,7 @@ public class Kernel extends Process  {
         return 0; // change this
     }
 
-    private void SendMessage(/*KernelMessage km*/) {
+    private void SendMessage(KernelMessage km) {
     }
 
     private KernelMessage WaitForMessage() {
@@ -93,5 +102,7 @@ public class Kernel extends Process  {
 
     private void FreeAllMemory(PCB currentlyRunning) {
     }
-
+    public Scheduler getScheduler() {
+        return scheduler;
+    }
 }

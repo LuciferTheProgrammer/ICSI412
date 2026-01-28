@@ -1,5 +1,10 @@
+import java.util.*;
+
 public class Test {
+    public static List<Object> params = new ArrayList<>();
     public static void main(String[] args) {
-        System.out.print("Hello World!");
+        params.add(5);               // autoboxes to Integer, stored as Object
+        // <-- compile error
+        System.out.println((int) params.get(0));
     }
 }

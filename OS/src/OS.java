@@ -11,6 +11,21 @@ public class OS {
     public static CallType currentCall;
 
     private static void startTheKernel() {
+        retVal = null;
+        ki.start();
+        Scheduler holder = ki.getScheduler();
+        if(holder.currentlyRunning!= null) {
+            holder.currentlyRunning.stop();
+        }
+        else {
+          while(retVal == null) {
+              try{
+                Thread.sleep(10);
+             }
+              catch(Exception e) {
+              }
+          }
+        }
     }
 
     public static void switchProcess() {
@@ -21,6 +36,8 @@ public class OS {
 
     public static void Startup(UserlandProcess[] init) {
 		// Create a kernel here
+        ki = new Kernel(init);
+        switchProcess();
     }
 
     public enum PriorityType {realtime, interactive, background}
@@ -56,44 +73,91 @@ public class OS {
 
     // Devices
     public static int Open(String s) {
-        return 0;
+        parameters.clear();
+        parameters.add(s);
+        currentCall = CallType.Open;
+        startTheKernel();
+        return ((int)retVal);
     }
 
     public static void Close(int id) {
+        parameters.clear();
+        parameters.add(id);
+        currentCall = CallType.Close;
+        startTheKernel();
     }
 
     public static byte[] Read(int id, int size) {
-        return null;
+        parameters.clear();
+        parameters.add(id);
+        parameters.add(size);
+        currentCall = CallType.Read;
+        startTheKernel();
+        return (byte[]) retVal;
     }
 
     public static void Seek(int id, int to) {
+        parameters.clear();
+        parameters.add(id);
+        parameters.add(to);
+        currentCall = CallType.Seek;
+        startTheKernel();
     }
 
     public static int Write(int id, byte[] data) {
-        return 0;
+        parameters.clear();
+        parameters.add(id);
+        parameters.add(data);
+        currentCall = CallType.Write;
+        startTheKernel();
+        return (int) retVal;
     }
 
     // Messages
     public static void SendMessage(KernelMessage km) {
+        parameters.clear();
+        parameters.add(km);
+        currentCall = CallType.SendMessage;
+        startTheKernel();
     }
 
     public static KernelMessage WaitForMessage() {
-        return null;
+        parameters.clear();
+        currentCall = CallType.WaitForMessage;
+        startTheKernel();
+        return (KernelMessage) retVal;
     }
 
     public static int GetPidByName(String name) {
-        return 0; // Change this
+        parameters.clear();
+        parameters.add(name);
+        currentCall = CallType.GetPIDByName;
+        startTheKernel();
+        return (int) retVal; // Change this
     }
 
     // Memory
     public static void GetMapping(int virtualPage) {
+        parameters.clear();
+        parameters.add(virtualPage);
+        currentCall = CallType.GetMapping;
+        startTheKernel();
     }
 
     public static int AllocateMemory(int size ) {
-        return 0; // Change this
+        parameters.clear();
+        parameters.add(size);
+        currentCall = CallType.AllocateMemory;
+        startTheKernel();
+        return (int) retVal; // Change this
     }
 
     public static boolean FreeMemory(int pointer, int size) {
-        return false; // Change this
+        parameters.clear();
+        parameters.add(pointer);
+        parameters.add(size);
+        currentCall = CallType.FreeMemory;
+        startTheKernel();
+        return (boolean) retVal; // Change this
     }
 }
