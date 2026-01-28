@@ -12,10 +12,15 @@ public class OS {
 
     private static void startTheKernel() {
         retVal = null;
-        ki.start();
+        //ki.start();
         Scheduler holder = ki.getScheduler();
-        if(holder.currentlyRunning!= null) {
-            holder.currentlyRunning.stop();
+        PCB sample = null;
+        if(holder!= null) {
+            sample = holder.currentlyRunning;
+        }
+        ki.start();
+        if(sample != null) {
+            sample.stop();
         }
         else {
           while(retVal == null) {

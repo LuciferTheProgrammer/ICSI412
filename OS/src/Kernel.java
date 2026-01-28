@@ -37,7 +37,9 @@ public class Kernel extends Process  {
                     case FreeMemory -> OS.retVal = FreeMemory((int) OS.parameters.get(0), (int) OS.parameters.get(1)); //Change cast type to "Integer" if it fails.
                 }
                 // TODO: Now that we have done the work asked of us, start some process then go to sleep.
-                scheduler.currentlyRunning.start();
+                if(scheduler.currentlyRunning != null) {
+                    scheduler.currentlyRunning.start();
+                }
                 this.stop();
             }
     }
