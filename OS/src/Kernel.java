@@ -1,5 +1,17 @@
+// This is the Kernel is the single reference point for every kernel call. The Kernel also is the central manager process where
+// it handles OS requests, by connecting OS calls to the scheduler and controls which process runs next.
 public class Kernel extends Process  {
+
+    // An instance for the Scheduler.
     private Scheduler scheduler;
+
+    /**
+     * The constructor creates a Kernel instance by taking in an array of UserlandProcess, then proceeding to create a Scheduler, for every process
+     * proceeds to create PCB for that process which takes in the process and priority type of the process (currently set to interactive), and adds the
+     * PCB to the Scheduler's list of PCBs.
+     *
+     * @param startup The array instance of UserlandProcess.
+     */
     public Kernel(UserlandProcess[] startup) {
 	// implement here
         scheduler = new Scheduler();
@@ -10,6 +22,11 @@ public class Kernel extends Process  {
     }
 
     @Override
+    /**
+     * This is the main method which has an infinite loop where the Kernel gets the current OS call and its parameters if there are any, to see what type of service is being requested,
+     * then it dispatches the request by calling a matching Kernel method. Finally, after handling the request it starts the next scheduled process and stops
+     * itself so only one process is running.
+     */
     public void main() {
             while (true) { // Warning on infinite loop is OK...
                 switch (OS.currentCall) { // get a job from OS, do it
@@ -44,11 +61,16 @@ public class Kernel extends Process  {
             }
     }
 
+    /**
+     * This function switches one process to another.
+     */
     private void SwitchProcess() {
         scheduler.SwitchProcess();
     }
 
     private void Exit() {
+        scheduler.currentlyRunning = null;
+        scheduler.SwitchProcess();
     }
 
     private int CreateProcess(UserlandProcess up, OS.PriorityType priority) {
@@ -56,10 +78,12 @@ public class Kernel extends Process  {
     }
 
     private void Sleep(int mills) {
+        scheduler.Sleep(mills);
+        scheduler.SwitchProcess();
     }
 
     private int GetPid() {
-        return 0; // change this
+        return scheduler.currentlyRunning.pid; // change this
     }
 
     private int Open(String s) {
@@ -104,6 +128,12 @@ public class Kernel extends Process  {
 
     private void FreeAllMemory(PCB currentlyRunning) {
     }
+
+    /**
+     * This function is to retrieve the Scheduler.
+     *
+     * @return the Scheduler.
+     */
     public Scheduler getScheduler() {
         return scheduler;
     }
