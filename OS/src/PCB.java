@@ -13,6 +13,8 @@ public class PCB { // Process Control Block
     // An instance of UserlandProcess.
     private UserlandProcess up;
 
+    public int consecutiveTimeout;
+
     /**
      * This is the constructor which takes in an instance of UserlandProcess and a priority type. Then it sets the priority type, the UserlandProcess, sets the
      * pid from the nextpid, and increments nextpid.

@@ -14,12 +14,17 @@ public class Scheduler {
     public PCB currentlyRunning;
 
     Clock clock = Clock.systemDefaultZone();
-    PriorityQueue<SleepPCB> sleepPCBs = new PriorityQueue<>();
+    PriorityQueue<SleepPCB> sleepPCBs;
 
-    public static class SleepPCB{
+    private static class SleepPCB{
         long duration;
         PCB pcb;
     }
+    private Queue<PCB> interactive;
+    private Queue<PCB> background;
+    private Queue<PCB> realtime;
+    private Random rand;
+    private PCB stopped;
 
 
 
@@ -29,12 +34,18 @@ public class Scheduler {
      *
      */
     public Scheduler() {
+        rand = new Random();
+        interactive = new LinkedList<>();
+        background = new LinkedList<>();
+        realtime = new LinkedList<>();
+        sleepPCBs = new PriorityQueue<>(Comparator.comparingLong(x -> x.duration));
         processes = new LinkedList<>();
         timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
                 if (currentlyRunning != null) {
+                    stopped = currentlyRunning;
                     currentlyRunning.requestStop();
                 }
             }
@@ -47,14 +58,27 @@ public class Scheduler {
      *
      */
     public void SwitchProcess() {
-        if(currentlyRunning != null) {
-            processes.add(currentlyRunning);
+        wakeProcesses();
+        boolean timedOut = false;
+        PCB previous = currentlyRunning;
+        if(previous != null) {
+            if (previous == stopped) {
+                timedOut = true;
+            }
+            if(timedOut) {
+                previous.consecutiveTimeout++;
+                if(previous.consecutiveTimeout >= 5) {
+                    demoteProcess(previous);
+                    previous.consecutiveTimeout = 0;
+                }
+            }
+            else {
+                previous.consecutiveTimeout = 0;
+            }
+            stopped = null;
+            PCB nextProcess = randomPick();
+            currentlyRunning = nextProcess;
         }
-        PCB nextProcess = processes.poll();
-        if (nextProcess == null) {
-            return;
-        }
-        currentlyRunning = nextProcess;
     }
 
     /**
@@ -80,6 +104,54 @@ public class Scheduler {
         else {
             return;
         }
+    }
+    private void wakeProcesses() {
+        long current = clock.millis();
+        while(!(sleepPCBs.isEmpty()) && (sleepPCBs.peek().duration <= current)) {
+            SleepPCB container = sleepPCBs.poll();
+            PCB process = container.pcb;
+            processes.add(process);
+        }
+    }
+    public void addPriorityQueue(PCB sample) {
+        OS.PriorityType priority = sample.getPriority();
+        switch (priority) {
+            case realtime -> realtime.add(sample);
+            case background -> background.add(sample);
+            case interactive -> interactive.add(sample);
+        }
+    }
+    private void demoteProcess(PCB sample) {
+        OS.PriorityType priority = sample.getPriority();
+        switch (priority) {
+            case realtime -> sample.setPriority(OS.PriorityType.interactive);
+            case interactive -> sample.setPriority(OS.PriorityType.background);
+        }
+    }
+    private PCB randomPick() {
+        PCB holder = null;
+            if(!realtime.isEmpty()) {
+                int range = rand.nextInt(10);
+                if (range < 6) {
+                    holder = realtime.poll();
+                } else if (range < 9) {
+                    holder = interactive.poll();
+                } else {
+                    holder = background.poll();
+                }
+                return holder;
+            }
+            else if(!interactive.isEmpty()) {
+                int range = rand.nextInt(4);
+                if(range < 3) {
+                    holder = interactive.poll();
+                }
+                else {
+                    holder = background.poll();
+                }
+                return holder;
+            }
+            return background.poll();
     }
 }
 

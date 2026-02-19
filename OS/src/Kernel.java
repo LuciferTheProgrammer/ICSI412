@@ -74,7 +74,10 @@ public class Kernel extends Process  {
     }
 
     private int CreateProcess(UserlandProcess up, OS.PriorityType priority) {
-        return 0; // change this
+        PCB pcb = new PCB(up, priority);
+        pcb.consecutiveTimeout = 0;
+        scheduler.addPriorityQueue(pcb);
+        return pcb.pid; // change this
     }
 
     private void Sleep(int mills) {
