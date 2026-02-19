@@ -1,0 +1,37 @@
+public void SwitchProcess() {
+
+    wakeProcesses();
+
+    PCB previous = currentlyRunning;
+
+    // 1) Requeue the previous process (unless Sleep/Exit already set it to null)
+    if (previous != null) {
+
+        // timeout/demotion logic (your existing code)
+        if (previous == stopped) {
+            previous.consecutiveTimeout++;
+
+            if (previous.consecutiveTimeout >= 5) {
+                demote(previous);
+                previous.consecutiveTimeout = 0;
+            }
+        } else {
+            previous.consecutiveTimeout = 0;
+        }
+
+        // ✅ missing line: put previous back into the correct priority queue
+        addPriorityQueue(previous);
+    }
+
+    // 2) Clear the timer marker
+    stopped = null;
+
+    // 3) Always pick the next process (even if previous was null)
+    PCB nextProcess = randomPick();
+    currentlyRunning = nextProcess;
+
+    // 4) If you have a “start/resume” call, it belongs HERE (on the NEW current)
+    if (currentlyRunning != null) {
+        currentlyRunning.start();     // or currentlyRunning.run/resume, whatever your PCB uses
+    }
+}
