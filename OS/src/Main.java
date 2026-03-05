@@ -1,15 +1,10 @@
-// This class is the main driver file which creates three processes, HelloWorld, GoodbyeWorld, and IdleProcess which are
-// derived from the UserlandProcess. Then, all three processes are stored in an UserlandProcess array instance which
-// then starts the processes. The program proceeds to print a bunch of Hello Worlds and Goodbye Worlds, alternating between the two.
+// This class is the main driver file which creates an array instance of UserlandProcess and then creates an instance of the Testing process for
+// the array to hold. Then this array process is used to initialize the OS startup. To test a long realtime process for demotion overtime and a realtime process
+// that sleeps which doesn't get demoted.
 public class Main {
     public static void main(String[] args) {
-        HelloWorld helloWorld = new HelloWorld();
-        GoodbyeWorld goodbyeWorld = new GoodbyeWorld();
-        IdleProcess idleProcess = new IdleProcess();
-        UserlandProcess[] init = new UserlandProcess[3];
-        init[0] = helloWorld;
-        init[1] = goodbyeWorld;
-        init[2] = idleProcess;
+        UserlandProcess[] init = new UserlandProcess[1];
+        init[0] = new Testing();
         OS.Startup(init);
     }
 }

@@ -13,7 +13,9 @@ public class PCB { // Process Control Block
     // An instance of UserlandProcess.
     private UserlandProcess up;
 
+    // The timeout streak.
     public int consecutiveTimeout;
+    public int[] devIDs = new int[10];
 
     /**
      * This is the constructor which takes in an instance of UserlandProcess and a priority type. Then it sets the priority type, the UserlandProcess, sets the
@@ -27,6 +29,9 @@ public class PCB { // Process Control Block
         this.up = up;
         pid = nextPid;
         nextPid++;
+        for(int i = 0; i < devIDs.length; i++) {
+            devIDs[i] = -1;
+        }
     }
 
     /**
@@ -96,4 +101,5 @@ ulp.isStopped() is true.  */
     public void setPriority(OS.PriorityType newPriority) {
         priority = newPriority;
     }
+
 }

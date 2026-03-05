@@ -110,6 +110,6 @@ public abstract class Process implements Runnable{
         if(quantum) {
             quantum = false;
             OS.switchProcess();
-        }
+       }
     }
 }

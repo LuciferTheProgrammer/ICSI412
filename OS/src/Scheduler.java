@@ -4,42 +4,60 @@ import java.time.Clock;
 // This is the Scheduler, it decides which process gets the CPU next (process to run) and for how long that process can run.
 public class Scheduler {
 
-    // The Linked List of PCBs.
-    private LinkedList<PCB> processes;
-
     // A Timer instance.
     private Timer timer;
 
     // A PCB instance, for current running process.
-    public PCB currentlyRunning;
+    private PCB currentlyRunning;
 
-    Clock clock = Clock.systemDefaultZone();
-    PriorityQueue<SleepPCB> sleepPCBs;
+    // Clock to set timer to wake process.
+    private Clock clock;
 
+    // Sleeping process queue.
+    private PriorityQueue<SleepPCB> sleepPCBs;
+
+    // Internal class to define sleeping process.
     private static class SleepPCB{
-        long duration;
-        PCB pcb;
+
+        // Time duration for process to sleep.
+        private long duration;
+
+        // The PCB for the sleeping process.
+        private PCB pcb;
     }
+
+    // Interactive process queue.
     private Queue<PCB> interactive;
+
+    // Background process queue.
     private Queue<PCB> background;
+
+    // Realtime process queue.
     private Queue<PCB> realtime;
+
+    // Random number for range.
     private Random rand;
+
+    // The process that is stopped.
     private PCB stopped;
+
+    private Kernel referenceKernel;
 
 
 
     /**
-     * This is the constructor which creates a Scheduler instance. This function sets the list of PCBs, sets the Timer instance to a fixed 250 milliseconds. The
-     * Timer instance is used as an interrupt, so this interrupt occurs every 250 milliseconds.
+     * This is the constructor which creates a Scheduler instance. This function sets the Timer instance to a fixed 250 milliseconds. The
+     * Timer instance is used as an interrupt, so this interrupt occurs every 250 milliseconds. In addition, also creates the priority queues for realtime,
+     * interactive, and background processes. It also creates a queue to hold sleeping processes. Finally, sets the random integer and the clock value.
      *
      */
     public Scheduler() {
+        clock = Clock.systemDefaultZone();
         rand = new Random();
         interactive = new LinkedList<>();
         background = new LinkedList<>();
         realtime = new LinkedList<>();
         sleepPCBs = new PriorityQueue<>(Comparator.comparingLong(x -> x.duration));
-        processes = new LinkedList<>();
         timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
@@ -53,8 +71,10 @@ public class Scheduler {
     }
 
     /**
-     * This function switches one process to another. It puts the current running process to the very end of the list of processes and extracts the next process
-     * from the head of the list, which then becomes the current running process.
+     * This function switches one process to another. It wakes a sleeping process which is put to a runnable priority queue,
+     * stops the current process and puts the stopped process into the correct priority queue, while also keeping track of the number of
+     * times the process had run to a timeout, if it's more than 5 times in a row, then the process is demoted to a lower level priority queue.
+     * Finally, uses randomPick() method to figure out what queue to get the next process to run from.
      *
      */
     public void SwitchProcess() {
@@ -62,37 +82,39 @@ public class Scheduler {
         boolean timedOut = false;
         PCB previous = currentlyRunning;
         if(previous != null) {
-            if (previous == stopped) {
-                timedOut = true;
-            }
-            if(timedOut) {
-                previous.consecutiveTimeout++;
-                if(previous.consecutiveTimeout >= 5) {
-                    demoteProcess(previous);
+            if (previous.isDone()) {
+                referenceKernel.closeAllDev(previous);
+            } else {
+                if (previous == stopped) {
+                    timedOut = true;
+                }
+                if (timedOut) {
+                    previous.consecutiveTimeout++;
+                    if (previous.consecutiveTimeout > 5) {
+                        demoteProcess(previous);
+                        previous.consecutiveTimeout = 0;
+                    }
+                } else {
                     previous.consecutiveTimeout = 0;
                 }
+                addPriorityQueue(previous);
             }
-            else {
-                previous.consecutiveTimeout = 0;
-            }
-            stopped = null;
-            PCB nextProcess = randomPick();
-            currentlyRunning = nextProcess;
         }
+        stopped = null;
+        currentlyRunning = randomPick();
     }
+
 
     /**
-     * This function takes in a PCB instance and proceeds to add that to the list of PCBs.
+     * This method takes in the requested amount of time to sleep which is added to the current clock value, the minimum time for the process
+     * to wake up. It also puts the sleeping process to a separate queue that holds other sleeping processes.
      *
-     * @param sample The PCB instance.
+     * @param mills The time to sleep.
      */
-    public void addProcess(PCB sample) {
-        processes.add(sample);
-    }
-
     public void Sleep(int mills) {
         PCB process = currentlyRunning;
         if (process != null) {
+            process.consecutiveTimeout = 0;
             SleepPCB carrier = new SleepPCB();
             long currentTime = clock.millis();
             long sum = currentTime + mills;
@@ -105,14 +127,26 @@ public class Scheduler {
             return;
         }
     }
+
+    /**
+     * This method wakes up a sleeping process from the sleeping queue and then proceeds to add the woken process to the correct
+     * priority queue.
+     *
+     */
     private void wakeProcesses() {
         long current = clock.millis();
         while(!(sleepPCBs.isEmpty()) && (sleepPCBs.peek().duration <= current)) {
             SleepPCB container = sleepPCBs.poll();
             PCB process = container.pcb;
-            processes.add(process);
+            addPriorityQueue(process);
         }
     }
+
+    /**
+     * This method takes in a process and based on its priority level, adds it to the appropriate priority queue.
+     *
+     * @param sample The process.
+     */
     public void addPriorityQueue(PCB sample) {
         OS.PriorityType priority = sample.getPriority();
         switch (priority) {
@@ -121,38 +155,88 @@ public class Scheduler {
             case interactive -> interactive.add(sample);
         }
     }
+
+    /**
+     * This method takes in a process and based on its priority level demotes that process from a higher priority level
+     * to a lower priority level. Demotes a realtime process to an interactive process and finally demotes an interactive process to
+     * a background process.
+     *
+     * @param sample The process.
+     */
     private void demoteProcess(PCB sample) {
         OS.PriorityType priority = sample.getPriority();
         switch (priority) {
-            case realtime -> sample.setPriority(OS.PriorityType.interactive);
-            case interactive -> sample.setPriority(OS.PriorityType.background);
+            case realtime ->  {
+                sample.setPriority(OS.PriorityType.interactive);
+                System.out.println("DEMOTE: " + sample.getName() + " -> " + sample.getPriority() + ".");
+            }
+            case interactive -> {
+                sample.setPriority(OS.PriorityType.background);
+                System.out.println("DEMOTE: " + sample.getName() + " -> " + sample.getPriority() + ".");
+            }
         }
     }
+
+    /**
+     * This method uses a probabilistic model to randomly pick a process from the three priority queues, one of each associated with the realtime,
+     * interactive, and background. If there are realtime processes, 6/10 will run a realtime process, 3/10 will run an interactive process, and 1/10
+     * will run a background process. Otherwise, if there are interactive processes, then it will 3/4 run interactive and 1/4 run background. If there are only,
+     * background, then only the first of those will run. The function also has fallbacks for each case.
+     *
+     * @return The randomly picked process.
+     */
     private PCB randomPick() {
-        PCB holder = null;
             if(!realtime.isEmpty()) {
                 int range = rand.nextInt(10);
                 if (range < 6) {
-                    holder = realtime.poll();
-                } else if (range < 9) {
-                    holder = interactive.poll();
-                } else {
-                    holder = background.poll();
+                    return(realtime.poll());
                 }
-                return holder;
-            }
-            else if(!interactive.isEmpty()) {
-                int range = rand.nextInt(4);
-                if(range < 3) {
-                    holder = interactive.poll();
+                else if (range < 9) {
+                    if (!interactive.isEmpty()) {
+                        return(interactive.poll());
+                    }
+                    if(!background.isEmpty()){
+                        return(background.poll());
+                    }
+                    return(realtime.poll());
                 }
                 else {
-                    holder = background.poll();
+                    if(!background.isEmpty()) {
+                        return(background.poll());
+                    }
+                    if(!interactive.isEmpty()) {
+                        return(interactive.poll());
+                    }
+                    return(realtime.poll());
                 }
-                return holder;
             }
-            return background.poll();
+            if(!interactive.isEmpty()) {
+                int range = rand.nextInt(4);
+                if(range < 3) {
+                    return(interactive.poll());
+                }
+                else {
+                    if(!background.isEmpty()) {
+                        return(background.poll());
+                    }
+                    return(interactive.poll());
+               }
+            }
+            if(!background.isEmpty()) {
+                return(background.poll());
+            }
+            return null;
     }
+    public PCB getCurrentlyRunning() {
+        return currentlyRunning;
+    }
+    public void referKernel(Kernel k) {
+        referenceKernel = k;
+    }
+    public void currentlyRunningNull() {
+        currentlyRunning = null;
+    }
+
 }
 
 

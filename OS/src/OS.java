@@ -27,20 +27,24 @@ public class OS {
         Scheduler holder = ki.getScheduler();
         PCB sample = null;
         if(holder!= null) {
-            sample = holder.currentlyRunning;
+            sample = holder.getCurrentlyRunning();
         }
         ki.start();
         if(sample != null) {
             sample.stop();
         }
         else {
-          while(retVal == null) {
-              try{
-                Thread.sleep(10);
-             }
-              catch(Exception e) {
-              }
-          }
+            if(currentCall == CallType.CreateProcess || currentCall == CallType.Read || currentCall == CallType.Write ||
+                    currentCall == CallType.Open || currentCall == CallType.GetPID) {
+                while (retVal == null) {
+                    try {
+                        Thread.sleep(10);
+                    }
+                    catch (Exception e) {
+
+                    }
+                }
+            }
         }
     }
 
