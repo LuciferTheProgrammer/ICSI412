@@ -9,6 +9,14 @@ public class HelloWorld extends UserlandProcess{
      * it now calls Sleep(int x) with a requested time for the process to sleep and to switches to another process.
      */
     public void main(){
+        int file = OS.Open("file shared.dat");
+        String s = "DZ";
+        byte[] result = s.getBytes();
+        OS.Write(file, result);
+        OS.Seek(file, 0);
+        byte[] sol = OS.Read(file, 2);
+        OS.Close(file);
+        System.out.println("Data read from device on HelloWorld process: " + new String(sol));
         while(true){
                 System.out.println("Hello World");
                 OS.Sleep(50);

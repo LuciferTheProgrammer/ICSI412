@@ -1,3 +1,4 @@
+
 // This is the test process that contains a realtime long process, that gets demoted and another realtime process that sleeps
 // which doesn't get demoted.
 public class Testing extends UserlandProcess{
@@ -7,6 +8,40 @@ public class Testing extends UserlandProcess{
      * that sleeps.
      */
     public void main () {
+        int test1 = OS.Open("random 100");
+        OS.Read(test1, 8);
+        OS.Close(test1);
+        int test2 = OS.Open("file data.dat");
+        String sample = "HELLO";
+        byte[] data = sample.getBytes();
+        OS.Write(test2, data);
+        OS.Seek(test2, 0);
+        byte[] results = OS.Read(test2, 5);
+        String container = new String(results);
+        System.out.println("Data read from device on Testing process: " + container);
+        OS.Seek(test2, 5);
+        OS.Close(test2);
+        int file1 = OS.Open("file data.dat");
+        int file2 = OS.Open("file data.dat");
+        String sample2 = "DDDDD";
+        byte[] data2 = sample2.getBytes();
+        OS.Write(file1, data2);
+        OS.Seek(file2, 0);
+        byte[] results2 = OS.Read(file2, 5);
+        String container2 = new String(results2);
+        System.out.println("Data read from device on Testing process: " + container2);
+        OS.Seek(file2, 5);
+        OS.Close(file1);
+        OS.Close(file2);
+        int[] deviceProcesses = new int[10];
+        for(int i = 0; i < 10; i++) {
+            deviceProcesses[i] = OS.Open("random");
+        }
+        int outlier = OS.Open("random");
+        System.out.println("The 11th open process/device should be -1" + " and generated result is " + outlier);
+        for(int i = 0; i < 10; i++) {
+            OS.Close(deviceProcesses[i]);
+        }
         System.out.println("Launching test processes...");
         OS.CreateProcess(new BlastPast(), OS.PriorityType.realtime);
         OS.CreateProcess(new HelloWorld(), OS.PriorityType.realtime);

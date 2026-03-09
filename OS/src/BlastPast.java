@@ -7,6 +7,14 @@ public class BlastPast extends UserlandProcess{
      * This function just computes a counter for a long time. Acts as a realtime long process.
      */
     public void main() {
+        int file = OS.Open("file shared.dat");
+        String s = "MY";
+        byte[] result = s.getBytes();
+        OS.Write(file, result);
+        OS.Seek(file, 0);
+        byte[] sol = OS.Read(file, 2);
+        OS.Close(file);
+        System.out.println("Data read from device on BlastPast process: " + new String(sol));
         System.out.println("Blast Past Process: Realtime long process.");
         while(true) {
             int counter = 0;
