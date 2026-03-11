@@ -1,10 +1,11 @@
 // This is the BlastPast which is derived from the UserlandProcess, it is a realtime
-// long process that just computes a counter and one that doesn't sleep.
+// long process that just computes a counter and one that doesn't sleep. Test Open, Close, Read, Write, and Seek.
 public class BlastPast extends UserlandProcess{
 
     @Override
     /**
-     * This function just computes a counter for a long time. Acts as a realtime long process.
+     * This function just computes a counter for a long time. Acts as a realtime long process. Now added to test functionality of Open, Close, Read, Write, and
+     * Seek. Also testing Random Device, Fake File System, and Virtual File System.
      */
     public void main() {
         int file = OS.Open("file shared.dat");

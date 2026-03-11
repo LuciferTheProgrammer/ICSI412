@@ -15,6 +15,8 @@ public class PCB { // Process Control Block
 
     // The timeout streak.
     public int consecutiveTimeout;
+
+    // Array of device ids of size 10.
     public int[] devIDs = new int[10];
 
     /**

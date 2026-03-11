@@ -1,11 +1,12 @@
 
 // This is the test process that contains a realtime long process, that gets demoted and another realtime process that sleeps
-// which doesn't get demoted.
+// which doesn't get demoted. Test Open, Close, Read, Write, and Seek.
 public class Testing extends UserlandProcess{
     @Override
     /**
      * This function creates two realtime processes, BlastPast which is a long realtime process and HelloWorld which is realtime process
-     * that sleeps.
+     * that sleeps. Now added to test functionality of Open, Close, Read, Write, and
+     * Seek. Also testing Random Device, Fake File System, and Virtual File System.
      */
     public void main () {
         int test1 = OS.Open("random 100");
@@ -38,7 +39,7 @@ public class Testing extends UserlandProcess{
             deviceProcesses[i] = OS.Open("random");
         }
         int outlier = OS.Open("random");
-        System.out.println("The 11th open process/device should be -1" + " and generated result is " + outlier);
+        System.out.println("The 11th open device/file on Testing Process should be -1" + " and generated result is " + outlier);
         for(int i = 0; i < 10; i++) {
             OS.Close(deviceProcesses[i]);
         }

@@ -41,6 +41,7 @@ public class Scheduler {
     // The process that is stopped.
     private PCB stopped;
 
+    // This is the reference to the Kernel.
     private Kernel referenceKernel;
 
 
@@ -227,16 +228,32 @@ public class Scheduler {
             }
             return null;
     }
+
+    /**
+     * This function returns the current running process.
+     *
+     * @return current running process.
+     */
     public PCB getCurrentlyRunning() {
         return currentlyRunning;
     }
+
+    /**
+     * This function assigns the Kernel to be referenced by the Scheduler.
+     *
+     * @param k The Kernel to refer to.
+     */
     public void referKernel(Kernel k) {
         referenceKernel = k;
     }
+
+    /**
+     * Sets the current running process to null.
+     *
+     */
     public void currentlyRunningNull() {
         currentlyRunning = null;
     }
-
 }
 
 

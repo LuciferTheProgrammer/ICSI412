@@ -2,8 +2,19 @@ import java.io.RandomAccessFile;
 import java.io.IOException;
 import java.util.Arrays;
 
+// This is the Fake File System which implements the Device interface. Implements Open, Close, Read, Seek, and Write.
 public class FakeFileSystem implements Device {
+
+    // An array of Random Access Files of size 10.
     private RandomAccessFile[]  randFiles = new RandomAccessFile[10];
+
+    /**
+     * This function implements Open. This will create and record a new Random Access File in the array. If the filename is empty or null
+     * this will throw an exception.
+     *
+     * @param filename The file.
+     * @return The slot or index.
+     */
     @Override
     public int Open(String filename) {
         if(filename == null || filename.isEmpty()) {
@@ -24,6 +35,13 @@ public class FakeFileSystem implements Device {
         }
         return -1;
     }
+
+    /**
+     * This function implements Close. This closes a slot in the Random Access File array by giving it a value of null.
+     *
+     * @param id The index in the array of Random Access Files.
+     */
+    @Override
     public void Close(int id) {
         if(id < 0 || id >= randFiles.length) {
             return;
@@ -40,6 +58,16 @@ public class FakeFileSystem implements Device {
         }
         randFiles[id] = null;
     }
+
+    /**
+     * This function implements Read which reads data from the device based on the given device id and the size of data that needs to be read.
+     * Also returns the read data in bytes.
+     *
+     * @param id The id, index.
+     * @param size The size of data that needs to be read.
+     * @return The read data in bytes.
+     */
+    @Override
     public byte[] Read(int id, int size) {
         if(id < 0 || id >= randFiles.length) {
             return null;
@@ -69,6 +97,15 @@ public class FakeFileSystem implements Device {
             return buffer;
         }
     }
+
+    /**
+     * This function Writes data to the device based on the given device id and data to be written. Also returns the length of the written data.
+     *
+     * @param id The id, index.
+     * @param data The data to be written.
+     * @return The length of the written data.
+     */
+    @Override
     public int Write(int id, byte[] data) {
         if(id < 0 || id >= randFiles.length) {
             return -1;
@@ -85,6 +122,14 @@ public class FakeFileSystem implements Device {
         }
         return data.length;
     }
+
+    /**
+     * This function Seeks or reads from a device based on the given device id and up to a certain point without returning the read data from the device.
+     *
+     * @param id The id, index.
+     * @param to up to a certain point.
+     */
+    @Override
     public void Seek(int id, int to) {
         if(id < 0 || id >= randFiles.length) {
             return;

@@ -4,7 +4,9 @@ public class Kernel extends Process  {
 
     // An instance for the Scheduler.
     private Scheduler scheduler;
-    VirtualFileSystem vfs = new VirtualFileSystem();
+
+    // This is the Virtual File System.
+    private VirtualFileSystem vfs = new VirtualFileSystem();
 
     /**
      * The constructor creates a Kernel instance by taking in an array of UserlandProcess, then proceeding to create a Scheduler, for every process
@@ -117,6 +119,15 @@ public class Kernel extends Process  {
         return pcb.pid;
     }
 
+    /**
+     * This is the Open function which uses getCurrentlyRunning() and finds an empty (-1) entry in the PCB's array. If there isn't one present, then
+     * return -1, it fails. Then calls vfs.Open(), If the result is -1, it fails. Otherwise, it puts the id from the vfs into the PCB's array and returns
+     * that array index.
+     * Opens a device/file with the given String and returns the device slot based from the current running process.
+     *
+     * @param s The String.
+     * @return array index.
+     */
     private int Open(String s) {
         PCB pcb = scheduler.getCurrentlyRunning();
         if(pcb == null) {
@@ -141,7 +152,11 @@ public class Kernel extends Process  {
     }
 
 
-
+    /**
+     * This is the Close function which uses the PCB array to convert to vfs and sets the PCB array entry to -1.
+     *
+     * @param id The id, index.
+     */
     private void Close(int id) {
         PCB pcb = scheduler.getCurrentlyRunning();
         if(pcb == null) {
@@ -158,6 +173,14 @@ public class Kernel extends Process  {
         pcb.devIDs[id] = -1;
     }
 
+    /**
+     * This is the Read function which gets an id from Userland which uses the PCB array to convert that id to what vfs expects
+     * and then this is passed to the call of the vfs. Reads data from a device based on the given size and returns the data read from the device in bytes.
+     *
+     * @param id The id, index.
+     * @param size The size of the data.
+     * @return The read data.
+     */
     private byte[] Read(int id, int size) {
         PCB pcb = scheduler.getCurrentlyRunning();
         if (pcb == null) {
@@ -174,6 +197,13 @@ public class Kernel extends Process  {
         return buffer;
     }
 
+    /**
+     * This is the Seek function which gets an id from Userland which uses the PCB array to convert that id to what vfs expects
+     * and then this is passed to the call of the vfs. This reads data from a device up to a certain point without returning the data that is read.
+     *
+     * @param id The id, index.
+     * @param to up to certain point.
+     */
     private void Seek(int id, int to) {
         PCB pcb = scheduler.getCurrentlyRunning();
         if(pcb == null) {
@@ -189,6 +219,14 @@ public class Kernel extends Process  {
         vfs.Seek(vfsHolder, to);
     }
 
+    /**
+     * This is the Write function which gets an id from Userland which uses the PCB array to convert that id to what vfs expects
+     * and then this is passed to the call of the vfs. This writes data to a device with the given data and returns a corresponding index.
+     *
+     * @param id The id, index.
+     * @param data The data to write.
+     * @return The index.
+     */
     private int Write(int id, byte[] data) {
         PCB pcb = scheduler.getCurrentlyRunning();
         if(pcb == null) {
@@ -238,6 +276,12 @@ public class Kernel extends Process  {
     public Scheduler getScheduler() {
         return scheduler;
     }
+
+    /**
+     * This function closes all the devices under a process/PCB.
+     *
+     * @param pcb The process.
+     */
     public void closeAllDev(PCB pcb) {
         for(int i = 0; i < 10; i++) {
             int vfsHolder = pcb.devIDs[i];
