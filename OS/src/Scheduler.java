@@ -17,13 +17,17 @@ public class Scheduler {
     private PriorityQueue<SleepPCB> sleepPCBs;
 
     // Internal class to define sleeping process.
-    private static class SleepPCB{
+    public static class SleepPCB{
 
         // Time duration for process to sleep.
         private long duration;
 
         // The PCB for the sleeping process.
         private PCB pcb;
+
+        public PCB getPcb() {
+            return pcb;
+        }
     }
 
     // Interactive process queue.
@@ -253,6 +257,18 @@ public class Scheduler {
      */
     public void currentlyRunningNull() {
         currentlyRunning = null;
+    }
+
+    public Queue<PCB> getPriorityQueue(String chosen) {
+        switch(chosen) {
+            case "realtime" -> {return realtime;}
+            case "background" -> {return background;}
+            case "interactive" -> {return interactive;}
+        }
+        return null;
+    }
+    public Queue<SleepPCB> getSleepPCBs() {
+        return sleepPCBs;
     }
 }
 

@@ -1,3 +1,6 @@
+import java.util.List;
+import java.util.LinkedList;
+
 // This is is the PCB (Process Control Block), which manages the process from the Kernel's perspective and is not visible from userland.
 public class PCB { // Process Control Block
 
@@ -19,6 +22,11 @@ public class PCB { // Process Control Block
     // Array of device ids of size 10.
     public int[] devIDs = new int[10];
 
+    private String name;
+
+    private List<KernelMessage> messages;
+
+
     /**
      * This is the constructor which takes in an instance of UserlandProcess and a priority type. Then it sets the priority type, the UserlandProcess, sets the
      * pid from the nextpid, and increments nextpid.
@@ -34,6 +42,8 @@ public class PCB { // Process Control Block
         for(int i = 0; i < devIDs.length; i++) {
             devIDs[i] = -1;
         }
+        this.messages = new LinkedList<>();
+        this.name = up.getClass().getSimpleName();
     }
 
     /**
@@ -42,9 +52,11 @@ public class PCB { // Process Control Block
      * @return The process name.
      */
     public String getName() {
-        return up.getClass().getSimpleName();
+        return name;
     }
-
+    public List<KernelMessage> getMessages() {
+        return messages;
+    }
     /**
      * This function returns the priority type of the process.
      *

@@ -1,3 +1,4 @@
+import java.util.*;
 // This is the Kernel is the single reference point for every kernel call. The Kernel also is the central manager process where
 // it handles OS requests, by connecting OS calls to the scheduler and controls which process runs next.
 public class Kernel extends Process  {
@@ -251,7 +252,48 @@ public class Kernel extends Process  {
     }
 
     private int GetPidByName(String name) {
-        return 0; // change this
+        if(name == null)
+            return -1;
+        PCB cur = scheduler.getCurrentlyRunning();
+        if(cur != null && cur.getName().equals(name)) {
+            return cur.pid;
+        }
+        Queue<PCB> realtimeQueue = scheduler.getPriorityQueue("realtime");
+        if(realtimeQueue != null) {
+            for(PCB pcb : realtimeQueue) {
+                if(pcb != null && pcb.getName().equals(name)) {
+                    return pcb.pid;
+                }
+            }
+        }
+        Queue<PCB> interactiveQueue = scheduler.getPriorityQueue("interactive");
+        if(interactiveQueue != null) {
+            for(PCB pcb : interactiveQueue) {
+                if(pcb != null && pcb.getName().equals(name)) {
+                    return pcb.pid;
+                }
+            }
+        }
+        Queue<PCB> backgroundQueue = scheduler.getPriorityQueue("background");
+        if(backgroundQueue != null) {
+            for(PCB pcb : backgroundQueue) {
+                if(pcb != null && pcb.getName().equals(name)) {
+                    return pcb.pid;
+                }
+            }
+        }
+        Queue<Scheduler.SleepPCB> sleepQueue = scheduler.getSleepPCBs();
+        if(sleepQueue != null) {
+            for(Scheduler.SleepPCB sleep : sleepQueue) {
+                if(sleep != null) {
+                    PCB process = sleep.getPcb();
+                    if(process != null && process.getName().equals(name)) {
+                        return process.pid;
+                    }
+                }
+            }
+        }
+        return -1;// change this
     }
 
     private void GetMapping(int virtualPage) {
