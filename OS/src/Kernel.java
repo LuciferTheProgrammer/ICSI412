@@ -9,6 +9,10 @@ public class Kernel extends Process  {
     // This is the Virtual File System.
     private VirtualFileSystem vfs = new VirtualFileSystem();
 
+    private Map<Integer, PCB> mappingPID;
+
+    private Map<Integer, PCB> waiting;
+
     /**
      * The constructor creates a Kernel instance by taking in an array of UserlandProcess, then proceeding to create a Scheduler, for every process
      * proceeds to create PCB for that process which takes in the process and priority type of the process (currently set to background), and adds the process
@@ -19,8 +23,11 @@ public class Kernel extends Process  {
     public Kernel(UserlandProcess[] startup) {
 	// implement here
         scheduler = new Scheduler();
+        mappingPID = new HashMap<>();
+        waiting = new HashMap<>();
         for(var result: startup) {
             PCB pcb = new PCB(result, OS.PriorityType.background);
+            mappingPID.put(pcb.pid, pcb);
             scheduler.addPriorityQueue(pcb);
         }
         scheduler.referKernel(this);
@@ -79,7 +86,14 @@ public class Kernel extends Process  {
      *
      */
     private void Exit() {
-        //scheduler.currentlyRunning = null;
+        PCB current = scheduler.getCurrentlyRunning();
+        if(current == null) {
+            scheduler.SwitchProcess();
+            return;
+        }
+        closeAllDev(current);
+        mappingPID.remove(current.pid);
+        waiting.remove(current.pid);
         scheduler.currentlyRunningNull();
         scheduler.SwitchProcess();
     }
@@ -94,6 +108,7 @@ public class Kernel extends Process  {
     private int CreateProcess(UserlandProcess up, OS.PriorityType priority) {
         PCB pcb = new PCB(up, priority);
         pcb.consecutiveTimeout = 0;
+        mappingPID.put(pcb.pid, pcb);
         scheduler.addPriorityQueue(pcb);
         return pcb.pid; // change this
     }
@@ -245,9 +260,41 @@ public class Kernel extends Process  {
     }
 
     private void SendMessage(KernelMessage km) {
+        if(km == null) {
+            return;
+        }
+        PCB sendingPCB = scheduler.getCurrentlyRunning();
+        if(sendingPCB == null) {
+            return;
+        }
+        KernelMessage copied = new KernelMessage(km);
+        copied.setSenderPID(sendingPCB.pid);
+        int targetPID = copied.getTargetPID();
+        PCB target = mappingPID.get(targetPID);
+        if(target == null) {
+            return;
+        }
+        List<KernelMessage> messages = target.getMessages();
+        messages.add(copied);
+        if(waiting.containsKey(targetPID)) {
+            waiting.remove(targetPID);
+            scheduler.addPriorityQueue(target);
+        }
     }
 
     private KernelMessage WaitForMessage() {
+        PCB current = scheduler.getCurrentlyRunning();
+        if(current == null) {
+            return null;
+        }
+        List<KernelMessage> messages = current.getMessages();
+        if(!messages.isEmpty()) {
+            KernelMessage first = messages.remove(0);
+            return first;
+        }
+        waiting.put(current.pid, current);
+        scheduler.currentlyRunningNull();
+        scheduler.SwitchProcess();
         return null;
     }
 
@@ -293,6 +340,11 @@ public class Kernel extends Process  {
                 }
             }
         }
+        for(PCB pcb : waiting.values()) {
+            if(pcb != null && pcb.getName().equals(name)) {
+                return pcb.pid;
+            }
+        }
         return -1;// change this
     }
 
@@ -332,5 +384,12 @@ public class Kernel extends Process  {
                 pcb.devIDs[i] = -1;
             }
         }
+    }
+    public Map<Integer, PCB> getPcbMap(String s) {
+        switch(s) {
+            case "mapPID" -> {return mappingPID;}
+            case "wait" -> {return waiting;}
+        }
+        return null;
     }
 }

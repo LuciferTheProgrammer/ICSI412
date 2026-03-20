@@ -89,6 +89,10 @@ public class Scheduler {
         if(previous != null) {
             if (previous.isDone()) {
                 referenceKernel.closeAllDev(previous);
+                Map<Integer, PCB> mapping = referenceKernel.getPcbMap("mapPID");
+                mapping.remove(previous.pid);
+                Map<Integer, PCB> wait = referenceKernel.getPcbMap("wait");
+                wait.remove(previous.pid);
             } else {
                 if (previous == stopped) {
                     timedOut = true;
