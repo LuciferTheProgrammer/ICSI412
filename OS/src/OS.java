@@ -14,7 +14,7 @@ public class OS {
     public static Object retVal;
 
     // An enum of what function to call.
-    public enum CallType {SwitchProcess,SendMessage, Open, Close, Read, Seek, Write, GetMapping, CreateProcess, Sleep, GetPID, AllocateMemory, FreeMemory, GetPIDByName, WaitForMessage, Exit}
+    public enum CallType {SwitchProcess,SendMessage, Open, Close, Read, Seek, Write, GetMapping, CreateProcess, Sleep, GetPID, AllocateMemory, FreeMemory, GetPidByName, WaitForMessage, Exit}
 
     // An instance of the enum of the current function call.
     public static CallType currentCall;
@@ -35,7 +35,8 @@ public class OS {
         }
         else {
             if(currentCall == CallType.CreateProcess || currentCall == CallType.Read || currentCall == CallType.Write ||
-                    currentCall == CallType.Open || currentCall == CallType.GetPID) {
+                    currentCall == CallType.Open || currentCall == CallType.GetPID || currentCall == CallType.GetPidByName ||
+            currentCall == CallType.WaitForMessage || currentCall == CallType.SendMessage) {
                 while (retVal == null) {
                     try {
                         Thread.sleep(10);
@@ -238,7 +239,7 @@ public class OS {
     public static int GetPidByName(String name) {
         parameters.clear();
         parameters.add(name);
-        currentCall = CallType.GetPIDByName;
+        currentCall = CallType.GetPidByName;
         startTheKernel();
         return (int) retVal;
     }

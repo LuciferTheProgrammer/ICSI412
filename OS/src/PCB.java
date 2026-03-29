@@ -22,14 +22,16 @@ public class PCB { // Process Control Block
     // Array of device ids of size 10.
     public int[] devIDs = new int[10];
 
+    // The name of the process.
     private String name;
 
+    // The message queue to store messages of a process.
     private List<KernelMessage> messages;
 
 
     /**
      * This is the constructor which takes in an instance of UserlandProcess and a priority type. Then it sets the priority type, the UserlandProcess, sets the
-     * pid from the nextpid, and increments nextpid.
+     * pid from the nextpid, and increments nextpid. Also, now creates a message queue to store messages of a process and also sets the name of the process.
      *
      * @param up The UserlandProcess instance.
      * @param priority The priority level of the process.
@@ -54,6 +56,12 @@ public class PCB { // Process Control Block
     public String getName() {
         return name;
     }
+
+    /**
+     * This function returns the message queue of a process which contains messages.
+     *
+     * @return The message queue, containing the messages of a process.
+     */
     public List<KernelMessage> getMessages() {
         return messages;
     }

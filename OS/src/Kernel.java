@@ -9,14 +9,18 @@ public class Kernel extends Process  {
     // This is the Virtual File System.
     private VirtualFileSystem vfs = new VirtualFileSystem();
 
+    // Mapping from Process ID to Process. To search which PCB belongs to a target PID, used by SendMessage().
     private Map<Integer, PCB> mappingPID;
 
+    // Mapping from Process ID to Process. Mainly used for processes that are blocked and waiting for a message, used by WaitForMessage().
     private Map<Integer, PCB> waiting;
 
     /**
      * The constructor creates a Kernel instance by taking in an array of UserlandProcess, then proceeding to create a Scheduler, for every process
      * proceeds to create PCB for that process which takes in the process and priority type of the process (currently set to background), and adds the process
-     * to correct priority queue.
+     * to correct priority queue. It also creates the mapping for process IDs and their corresponding processes and also the mapping for processes
+     * that are blocked and waiting for a message, process IDs and their corresponding processes. Adds all current process IDs and their corresponding
+     * processes to the generic mapping.
      *
      * @param startup The array instance of UserlandProcess.
      */
@@ -57,7 +61,7 @@ public class Kernel extends Process  {
                     case Seek -> Seek((int) OS.parameters.get(0), (int) OS.parameters.get(1)); //Change cast type to "Integer" if it fails.
                     case Write -> OS.retVal = Write((int) OS.parameters.get(0), (byte[]) OS.parameters.get(1)); //Change cast type to "Integer" if it fails.
                     // Messages
-                    case GetPIDByName -> OS.retVal = GetPidByName((String) OS.parameters.get(0));
+                    case GetPidByName -> OS.retVal = GetPidByName((String) OS.parameters.get(0));
                     case SendMessage -> SendMessage((KernelMessage) OS.parameters.get(0));
                     case WaitForMessage -> OS.retVal = WaitForMessage();
                     // Memory
@@ -83,6 +87,9 @@ public class Kernel extends Process  {
 
     /**
      * This is the exit function which unschedules the current process so that it never gets to run again.
+     * If the current process exits, then all devices open from the process are closed. The process is removed from the generic mapping
+     * between process IDs and processes and also removed from waiting block/mapping. The scheduler sets the current process to null and switches to
+     * another process.
      *
      */
     private void Exit() {
@@ -101,6 +108,8 @@ public class Kernel extends Process  {
     /**
      * This is method creates a process by taking in process and its priority level. Then it proceeds to create a process using those following parameters,
      * sets the timeout streak for the process to 0, adds that newly created process to the correct priority queue, and returns the process id.
+     * Now also puts the process ID and its corresponding process into the generic mapping.
+     *
      * @param up The process.
      * @param priority priority level.
      * @return The process id.
@@ -259,6 +268,13 @@ public class Kernel extends Process  {
         return result;
     }
 
+    /**
+     * This function takes in a Kernel Message which is then copied, sets the sending pid, retrieves the target pid and uses that to extract the corresponding
+     * process from the generic mapping. Then, obtains the messages of the target process and adds the message to the message queue,
+     * and finally removes the target process from the waiting map/block. It also adds the process into the appropriate process priority queue.
+     *
+     * @param km Kernel Message.
+     */
     private void SendMessage(KernelMessage km) {
         if(km == null) {
             return;
@@ -282,6 +298,12 @@ public class Kernel extends Process  {
         }
     }
 
+    /**
+     * This function checks to see if the current process has a message. If so, then it removes it off of the queue and returns it. If not, then this function
+     * will deschedule and add the current process ID and its corresponding process into the waiting map/block.
+     *
+     * @return the Kernel Message.
+     */
     private KernelMessage WaitForMessage() {
         PCB current = scheduler.getCurrentlyRunning();
         if(current == null) {
@@ -298,6 +320,15 @@ public class Kernel extends Process  {
         return null;
     }
 
+    /**
+     * This function takes in a process name where it first checks the current running process and see if its process name is the equal to the given
+     * name parameter; if so, then it returns that process id. If not, it then loops and checks processes in the priority queues such as the realtime,
+     * interactive, and background, also checks in the sleeping processes queue, and finally also check in the waiting map/block. If it finds a matching process
+     * name with the given name, then it returns that process id. If not, returns -1 to indicate no match was found.
+     *
+     * @param name The process name.
+     * @return The process id.
+     */
     private int GetPidByName(String name) {
         if(name == null)
             return -1;
@@ -385,6 +416,13 @@ public class Kernel extends Process  {
             }
         }
     }
+
+    /**
+     * This function takes in a String and returns the generic mapping or the waiting map.
+     *
+     * @param s String, keyword.
+     * @return The generic mapping or waiting map.
+     */
     public Map<Integer, PCB> getPcbMap(String s) {
         switch(s) {
             case "mapPID" -> {return mappingPID;}

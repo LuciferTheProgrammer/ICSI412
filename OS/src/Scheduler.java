@@ -79,7 +79,8 @@ public class Scheduler {
      * This function switches one process to another. It wakes a sleeping process which is put to a runnable priority queue,
      * stops the current process and puts the stopped process into the correct priority queue, while also keeping track of the number of
      * times the process had run to a timeout, if it's more than 5 times in a row, then the process is demoted to a lower level priority queue.
-     * Finally, uses randomPick() method to figure out what queue to get the next process to run from.
+     * Finally, uses randomPick() method to figure out what queue to get the next process to run from. Also, now checks if the previous running process
+     * is finished; if so, then it retrieves the generic mapping and waiting map/block, and finally removes the previously completed process from both.
      *
      */
     public void SwitchProcess() {
@@ -263,6 +264,13 @@ public class Scheduler {
         currentlyRunning = null;
     }
 
+    /**
+     * This function takes in a String. Given the keyword, it returns either the realtime priority queue, background priority queue, or interactive
+     * priority queue.
+     *
+     * @param chosen keyword.
+     * @return The realtime, background, or interactive priority queue.
+     */
     public Queue<PCB> getPriorityQueue(String chosen) {
         switch(chosen) {
             case "realtime" -> {return realtime;}
@@ -271,6 +279,12 @@ public class Scheduler {
         }
         return null;
     }
+
+    /**
+     * This function returns the sleeping processes queue.
+     *
+     * @return The sleeping processes queue.
+     */
     public Queue<SleepPCB> getSleepPCBs() {
         return sleepPCBs;
     }
