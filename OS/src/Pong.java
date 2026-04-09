@@ -22,7 +22,7 @@ public class Pong extends UserlandProcess{
                 what = response.getIndicator();
                 KernelMessage newMessage = new KernelMessage(sender, target, what, data);
                 OS.SendMessage(newMessage);
-                Thread.sleep(50);
+                OS.Sleep(50);
             }
             catch(Exception e) {
                 // Do Nothing

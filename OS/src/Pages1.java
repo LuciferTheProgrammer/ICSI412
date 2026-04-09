@@ -23,7 +23,6 @@ public class Pages1 extends UserlandProcess {
         }
         while (true) {
             try{
-
                 OS.Sleep(50);
             }
             catch(Exception e){

@@ -23,7 +23,7 @@ public class Ping extends UserlandProcess{
                 what = response.getIndicator() + 1;
                 KernelMessage newMessage = new KernelMessage(sender, target, what, data);
                 OS.SendMessage(newMessage);
-                Thread.sleep(50);
+                OS.Sleep(50);
             }
             catch(Exception e) {
                 // Do Nothing
