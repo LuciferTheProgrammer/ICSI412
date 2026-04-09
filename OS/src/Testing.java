@@ -44,11 +44,14 @@ public class Testing extends UserlandProcess{
             OS.Close(deviceProcesses[i]);
         }
         System.out.println("Launching test processes...");
-        OS.CreateProcess(new Ping(), OS.PriorityType.realtime);
-        OS.CreateProcess(new Pong(), OS.PriorityType.realtime);
-        OS.CreateProcess(new BlastPast(), OS.PriorityType.realtime);
-        OS.CreateProcess(new HelloWorld(), OS.PriorityType.realtime);
-        OS.CreateProcess(new GoodbyeWorld(), OS.PriorityType.background);
+        OS.CreateProcess(new Pages1(), OS.PriorityType.realtime);
+        OS.CreateProcess(new Pages2(), OS.PriorityType.realtime);
+        OS.CreateProcess(new Pages3(), OS.PriorityType.realtime);
+        //OS.CreateProcess(new Ping(), OS.PriorityType.realtime);
+        //OS.CreateProcess(new Pong(), OS.PriorityType.realtime);
+        //OS.CreateProcess(new BlastPast(), OS.PriorityType.realtime);
+        //OS.CreateProcess(new HelloWorld(), OS.PriorityType.realtime);
+        //OS.CreateProcess(new GoodbyeWorld(), OS.PriorityType.background);
 
         while(true) {
             try {

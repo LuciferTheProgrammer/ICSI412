@@ -36,7 +36,8 @@ public class OS {
         else {
             if(currentCall == CallType.CreateProcess || currentCall == CallType.Read || currentCall == CallType.Write ||
                     currentCall == CallType.Open || currentCall == CallType.GetPID || currentCall == CallType.GetPidByName ||
-            currentCall == CallType.WaitForMessage || currentCall == CallType.SendMessage) {
+            currentCall == CallType.WaitForMessage || currentCall == CallType.SendMessage || currentCall == CallType.FreeMemory || currentCall == CallType.AllocateMemory ||
+            currentCall == CallType.GetMapping) {
                 while (retVal == null) {
                     try {
                         Thread.sleep(10);
@@ -266,7 +267,10 @@ public class OS {
      * @param size The size of memory, an integer value.
      * @return The casted value, an integer value.
      */
-    public static int AllocateMemory(int size ) {
+    public static int AllocateMemory(int size) {
+        if(size <= 0 || size % 1024 != 0) {
+            return -1;
+        }
         parameters.clear();
         parameters.add(size);
         currentCall = CallType.AllocateMemory;
@@ -283,6 +287,9 @@ public class OS {
      * @return The casted value, a boolean.
      */
     public static boolean FreeMemory(int pointer, int size) {
+        if(pointer < 0 || pointer % 1024 != 0 || size <= 0 || size % 1024 != 0) {
+            return false;
+        }
         parameters.clear();
         parameters.add(pointer);
         parameters.add(size);

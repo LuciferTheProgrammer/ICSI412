@@ -28,6 +28,8 @@ public class PCB { // Process Control Block
     // The message queue to store messages of a process.
     private List<KernelMessage> messages;
 
+    private int[] mapping = new int[100];
+
 
     /**
      * This is the constructor which takes in an instance of UserlandProcess and a priority type. Then it sets the priority type, the UserlandProcess, sets the
@@ -43,6 +45,9 @@ public class PCB { // Process Control Block
         nextPid++;
         for(int i = 0; i < devIDs.length; i++) {
             devIDs[i] = -1;
+        }
+        for(int i = 0; i < mapping.length; i++) {
+            mapping[i] = -1;
         }
         this.messages = new LinkedList<>();
         this.name = up.getClass().getSimpleName();
@@ -124,4 +129,7 @@ ulp.isStopped() is true.  */
         priority = newPriority;
     }
 
+    public int[] getMapping() {
+        return mapping;
+    }
 }

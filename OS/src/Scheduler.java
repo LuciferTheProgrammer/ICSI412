@@ -89,6 +89,7 @@ public class Scheduler {
         PCB previous = currentlyRunning;
         if(previous != null) {
             if (previous.isDone()) {
+                referenceKernel.FreeAllMemory(previous);
                 referenceKernel.closeAllDev(previous);
                 Map<Integer, PCB> mapping = referenceKernel.getPcbMap("mapPID");
                 mapping.remove(previous.pid);
@@ -112,6 +113,7 @@ public class Scheduler {
         }
         stopped = null;
         currentlyRunning = randomPick();
+        Hardware.TLBClean();
     }
 
 

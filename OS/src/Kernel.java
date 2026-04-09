@@ -15,6 +15,10 @@ public class Kernel extends Process  {
     // Mapping from Process ID to Process. Mainly used for processes that are blocked and waiting for a message, used by WaitForMessage().
     private Map<Integer, PCB> waiting;
 
+    private Random rand;
+
+    private boolean[] pagesUsed = new boolean[1024];
+
     /**
      * The constructor creates a Kernel instance by taking in an array of UserlandProcess, then proceeding to create a Scheduler, for every process
      * proceeds to create PCB for that process which takes in the process and priority type of the process (currently set to background), and adds the process
@@ -26,6 +30,7 @@ public class Kernel extends Process  {
      */
     public Kernel(UserlandProcess[] startup) {
 	// implement here
+        rand = new Random();
         scheduler = new Scheduler();
         mappingPID = new HashMap<>();
         waiting = new HashMap<>();
@@ -98,6 +103,7 @@ public class Kernel extends Process  {
             scheduler.SwitchProcess();
             return;
         }
+        FreeAllMemory(current);
         closeAllDev(current);
         mappingPID.remove(current.pid);
         waiting.remove(current.pid);
@@ -380,17 +386,115 @@ public class Kernel extends Process  {
     }
 
     private void GetMapping(int virtualPage) {
+        PCB pcb = scheduler.getCurrentlyRunning();
+        if (pcb == null) {
+            return;
+        }
+        int[] mapping = pcb.getMapping();
+        if (virtualPage < 0 || virtualPage >= mapping.length) {
+            System.out.println("seg fault");
+            closeAllDev(pcb);
+            mappingPID.remove(pcb.pid);
+            waiting.remove(pcb.pid);
+            scheduler.currentlyRunningNull();
+            scheduler.SwitchProcess();
+            return;
+        }
+        int physicalPage = mapping[virtualPage];
+        if(physicalPage == -1) {
+            System.out.println("seg fault");
+            closeAllDev(pcb);
+            mappingPID.remove(pcb.pid);
+            waiting.remove(pcb.pid);
+            scheduler.currentlyRunningNull();
+            scheduler.SwitchProcess();
+            return;
+        }
+        int randomInt = rand.nextInt(2);
+        Hardware.modifyTLB(virtualPage, physicalPage, randomInt);
     }
 
     private int AllocateMemory(int size) {
-        return 0; // change this
+        PCB pcb = scheduler.getCurrentlyRunning();
+        if(pcb == null) {
+            return -1;
+        }
+        int required = size / 1024;
+        int[] mapping = pcb.getMapping();
+        int start = -1;
+        for(int i = 0; i <= mapping.length - required; i++) {
+            boolean hole = true;
+            for(int k = 0; k < required; k++) {
+                if(mapping[i + k] != -1) {
+                    hole = false;
+                    break;
+                }
+            }
+            if(hole) {
+                start = i;
+                break;
+            }
+        }
+        if(start == -1) {
+            return -1;
+        }
+        for(int i = start; i < start + required; i++) {
+            int physicalPage = -1;
+            for(int k = 0; k < pagesUsed.length; k++) {
+                if(!pagesUsed[k]) {
+                    physicalPage = k;
+                    break;
+                }
+            }
+            if(physicalPage == -1) {
+                for(int j = start; j < i; j++) {
+                    int old = mapping[j];
+                    pagesUsed[old] = false;
+                    mapping[j] = -1;
+                }
+                return -1;
+            }
+            pagesUsed[physicalPage] = true;
+            mapping[i] = physicalPage;
+        }
+        int space = start * 1024;
+        return space;
     }
 
     private boolean FreeMemory(int pointer, int size) {
+        PCB pcb = scheduler.getCurrentlyRunning();
+        if(pcb == null) {
+            return false;
+        }
+        int virtualPage = pointer / 1024;
+        int free = size / 1024;
+        int[] mapping = pcb.getMapping();
+        int range = (virtualPage + free - 1);
+        if(virtualPage < 0 || range >= mapping.length) {
+            return false;
+        }
+        for(int i = virtualPage; i <= range; i++) {
+            if(mapping[i] == -1) {
+                return false;
+            }
+        }
+        for(int i = virtualPage; i <= range; i++) {
+            int physicalPage = mapping[i];
+            pagesUsed[physicalPage] = false;
+            mapping[i] = -1;
+        }
         return true;
     }
 
-    private void FreeAllMemory(PCB currentlyRunning) {
+    public void FreeAllMemory(PCB currentlyRunning) {
+        int[] mapping = currentlyRunning.getMapping();
+        for(int i = 0; i < mapping.length; i++) {
+            if(mapping[i] != -1) {
+                int physicalPage = mapping[i];
+                pagesUsed[physicalPage] = false;
+                mapping[i] = -1;
+            }
+        }
     }
 
     /**
