@@ -1,5 +1,18 @@
+// This is the Pages1 process which is derived from UserlandProcess. This process
+// allocates a space in memory which returns a pointer to the starting address
+// in the allocated block and then proceeds to write 3 different data into memory
+// and reads those data back from memory. It tests read/write function of Hardware
+// and also test memory allocation.
 public class Pages1 extends UserlandProcess {
+
     @Override
+    /**
+     * This function tests the memory allocation functionality as well as read/write
+     * functionality of the Hardware class. It allocates space in memory, where it then
+     * uses the returned starting pointer to write data 3 times in memory, while incrementing
+     * the pointer after each write. Then reads the written data back from memory and checks
+     * if the written data matches the data that is read back.
+     */
     public void main() {
         int pointer = OS.AllocateMemory(1024);
         if (pointer == -1) {

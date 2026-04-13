@@ -1,5 +1,16 @@
+// This is the Pages2 process which is derived from UserlandProcess. This process
+// allocates a space in memory which returns a pointer to the starting address
+// in the allocated block and then proceeds to write 3 different data into memory
+// and reads those data back from memory. It tests read/write function of Hardware
+// and also test memory allocation. This now implements multiple allocations for this process.
 public class Pages2 extends UserlandProcess{
+
     @Override
+    /**
+     * This function tests the memory allocation functionality as well as read/write
+     * functionality of the Hardware class. This is the same as Pages1 but now implements
+     * multiple allocations instead of just 1 allocation.
+     */
     public void main() {
         int pointer1 = OS.AllocateMemory(1024);
         int pointer2 = OS.AllocateMemory(2048);

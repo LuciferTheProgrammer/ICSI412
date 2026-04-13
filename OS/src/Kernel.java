@@ -15,8 +15,10 @@ public class Kernel extends Process  {
     // Mapping from Process ID to Process. Mainly used for processes that are blocked and waiting for a message, used by WaitForMessage().
     private Map<Integer, PCB> waiting;
 
+    // Random object.
     private Random rand;
 
+    // An array to hold the status of pages that are in use and those that are not.
     private boolean[] pagesUsed = new boolean[1024];
 
     /**
@@ -24,7 +26,7 @@ public class Kernel extends Process  {
      * proceeds to create PCB for that process which takes in the process and priority type of the process (currently set to background), and adds the process
      * to correct priority queue. It also creates the mapping for process IDs and their corresponding processes and also the mapping for processes
      * that are blocked and waiting for a message, process IDs and their corresponding processes. Adds all current process IDs and their corresponding
-     * processes to the generic mapping.
+     * processes to the generic mapping. Also initializes a random object.
      *
      * @param startup The array instance of UserlandProcess.
      */
@@ -94,7 +96,7 @@ public class Kernel extends Process  {
      * This is the exit function which unschedules the current process so that it never gets to run again.
      * If the current process exits, then all devices open from the process are closed. The process is removed from the generic mapping
      * between process IDs and processes and also removed from waiting block/mapping. The scheduler sets the current process to null and switches to
-     * another process.
+     * another process. Now frees all the memory allocated to a process.
      *
      */
     private void Exit() {
@@ -385,6 +387,17 @@ public class Kernel extends Process  {
         return -1;// change this
     }
 
+    /**
+     * This function takes in a virtual page. First it gets the current working process,
+     * then gets the mapping array of the process and if the virtual page is out of bounds
+     * from the process' mapping or does not have a physical page mapped for the given virtual page
+     * then it seg faults and the process is terminated and switches to another process. If there
+     * is virtual page to physical page mapping then the function picks randomly between 0 or 1,
+     * using that random integer, as an index to which to modify the TLB which utilizes the given
+     * virtual page and physical page.
+     *
+     * @param virtualPage The virtual page to map to physical page.
+     */
     private void GetMapping(int virtualPage) {
         PCB pcb = scheduler.getCurrentlyRunning();
         if (pcb == null) {
@@ -414,6 +427,20 @@ public class Kernel extends Process  {
         Hardware.modifyTLB(virtualPage, physicalPage, randomInt);
     }
 
+    /**
+     * This function takes in a size. First gets the current working process, computes the
+     * required number of pages to add, gets the process' mapping table (array), searches
+     * the process' (mapping) virtual page table for a big enough hole (consecutive slots with -1's) that could fit
+     * the required number of pages, if there is nothing big enough the allocation fails, then
+     * it starts assigning the physical pages to each virtual page in that big hole, it searches the
+     * first free physical page in memory and if physical memory runs out part way through unassigns
+     * pages and fails. However, if it's a success, then it marks the specific physical page as used
+     * and stores the virtual page to physical page mapping in the processes mapping table. Finally,
+     * it returns the starting virtual address.
+     *
+     * @param size The size to allocate in memory.
+     * @return The starting virtual address.
+     */
     private int AllocateMemory(int size) {
         PCB pcb = scheduler.getCurrentlyRunning();
         if(pcb == null) {
@@ -461,6 +488,21 @@ public class Kernel extends Process  {
         return space;
     }
 
+    /**
+     * This function takes a pointer to an address and block size in memory. First,
+     * it gets the current running process, computes its virtual page and number of physical pages to free.
+     * Then, retrieves the process' mapping table, computes the range, the last virtual page.
+     * If the starting virtual page number and last virtual page number are not within the bounds of
+     * mapping table, then returns false. If it is, then uses the starting virtual page and
+     * last virtual page as bounds in which to get the corresponding physical page for each virtual
+     * page and set the physical page as not used (free) in the free list and also setting the corresponding
+     * mapping table entries to -1 as a way to remove these virtual page to physical page mappings in the process.
+     * Finally, cleans/reinitializes the TLB and returns true upon success.
+     *
+     * @param pointer The pointer or start in memory to free.
+     * @param size The size in memory to free.
+     * @return true if memory was successfully freed or false if not.
+     */
     private boolean FreeMemory(int pointer, int size) {
         PCB pcb = scheduler.getCurrentlyRunning();
         if(pcb == null) {
@@ -483,9 +525,18 @@ public class Kernel extends Process  {
             pagesUsed[physicalPage] = false;
             mapping[i] = -1;
         }
+        Hardware.TLBClean();
         return true;
     }
 
+    /**
+     * This function takes in a current running process and gets its mapping table. Then, it
+     * proceeds to get the physical page for each of its virtual page to physical page mappings.
+     * where it sets these entries to -1, removing the mappings and while marking those
+     * physical pages as not used (free) in the free list array.
+     *
+     * @param currentlyRunning The current running process.
+     */
     public void FreeAllMemory(PCB currentlyRunning) {
         int[] mapping = currentlyRunning.getMapping();
         for(int i = 0; i < mapping.length; i++) {

@@ -7,6 +7,7 @@ public class Testing extends UserlandProcess{
      * This function creates two realtime processes, BlastPast which is a long realtime process and HelloWorld which is realtime process
      * that sleeps. Now added to test functionality of Open, Close, Read, Write, and
      * Seek. Also testing Random Device, Fake File System, and Virtual File System. Now also creates Ping and Pong processes.
+     * Now creates Pages1 - Pages5 processes.
      */
     public void main () {
         int test1 = OS.Open("random 100");
@@ -44,9 +45,9 @@ public class Testing extends UserlandProcess{
             OS.Close(deviceProcesses[i]);
         }
         System.out.println("Launching test processes...");
-        //OS.CreateProcess(new Pages1(), OS.PriorityType.realtime);
-        //OS.CreateProcess(new Pages2(), OS.PriorityType.realtime);
-        //OS.CreateProcess(new Pages3(), OS.PriorityType.realtime);
+        OS.CreateProcess(new Pages1(), OS.PriorityType.realtime);
+        OS.CreateProcess(new Pages2(), OS.PriorityType.realtime);
+        OS.CreateProcess(new Pages3(), OS.PriorityType.realtime);
         OS.CreateProcess(new Pages4(), OS.PriorityType.realtime);
         OS.CreateProcess(new Pages5(), OS.PriorityType.realtime);
         //OS.CreateProcess(new Ping(), OS.PriorityType.realtime);
