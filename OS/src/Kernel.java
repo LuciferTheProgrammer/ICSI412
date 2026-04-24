@@ -21,6 +21,10 @@ public class Kernel extends Process  {
     // An array to hold the status of pages that are in use and those that are not.
     private boolean[] pagesUsed = new boolean[1024];
 
+    private int idSwapFile;
+
+    private int nextSwap;
+
     /**
      * The constructor creates a Kernel instance by taking in an array of UserlandProcess, then proceeding to create a Scheduler, for every process
      * proceeds to create PCB for that process which takes in the process and priority type of the process (currently set to background), and adds the process
@@ -36,6 +40,8 @@ public class Kernel extends Process  {
         scheduler = new Scheduler();
         mappingPID = new HashMap<>();
         waiting = new HashMap<>();
+        idSwapFile = vfs.Open("file swapfile.dat");
+        nextSwap = 0;
         for(var result: startup) {
             PCB pcb = new PCB(result, OS.PriorityType.background);
             mappingPID.put(pcb.pid, pcb);
@@ -403,7 +409,7 @@ public class Kernel extends Process  {
         if (pcb == null) {
             return;
         }
-        int[] mapping = pcb.getMapping();
+        VirtualToPhysicalMapping[] mapping = pcb.getMapping();
         if (virtualPage < 0 || virtualPage >= mapping.length) {
             System.out.println("seg fault");
             closeAllDev(pcb);
@@ -413,7 +419,17 @@ public class Kernel extends Process  {
             scheduler.SwitchProcess();
             return;
         }
-        int physicalPage = mapping[virtualPage];
+        VirtualToPhysicalMapping slot = mapping[virtualPage];
+        if(slot == null) {
+            System.out.println("seg fault");
+            closeAllDev(pcb);
+            mappingPID.remove(pcb.pid);
+            waiting.remove(pcb.pid);
+            scheduler.currentlyRunningNull();
+            scheduler.SwitchProcess();
+            return;
+        }
+        int physicalPage = mapping[virtualPage].physicalPageNumber;
         if(physicalPage == -1) {
             System.out.println("seg fault");
             closeAllDev(pcb);
@@ -447,12 +463,12 @@ public class Kernel extends Process  {
             return -1;
         }
         int required = size / 1024;
-        int[] mapping = pcb.getMapping();
+        VirtualToPhysicalMapping[] mapping = pcb.getMapping();
         int start = -1;
         for(int i = 0; i <= mapping.length - required; i++) {
             boolean hole = true;
             for(int k = 0; k < required; k++) {
-                if(mapping[i + k] != -1) {
+                if(mapping[i + k] != null) {
                     hole = false;
                     break;
                 }
@@ -466,23 +482,7 @@ public class Kernel extends Process  {
             return -1;
         }
         for(int i = start; i < start + required; i++) {
-            int physicalPage = -1;
-            for(int k = 0; k < pagesUsed.length; k++) {
-                if(!pagesUsed[k]) {
-                    physicalPage = k;
-                    break;
-                }
-            }
-            if(physicalPage == -1) {
-                for(int j = start; j < i; j++) {
-                    int old = mapping[j];
-                    pagesUsed[old] = false;
-                    mapping[j] = -1;
-                }
-                return -1;
-            }
-            pagesUsed[physicalPage] = true;
-            mapping[i] = physicalPage;
+            mapping[i] = new VirtualToPhysicalMapping();
         }
         int space = start * 1024;
         return space;
@@ -510,20 +510,22 @@ public class Kernel extends Process  {
         }
         int virtualPage = pointer / 1024;
         int free = size / 1024;
-        int[] mapping = pcb.getMapping();
+        VirtualToPhysicalMapping[] mapping = pcb.getMapping();
         int range = (virtualPage + free - 1);
         if(virtualPage < 0 || range >= mapping.length) {
             return false;
         }
         for(int i = virtualPage; i <= range; i++) {
-            if(mapping[i] == -1) {
+            if(mapping[i] == null) {
                 return false;
             }
         }
         for(int i = virtualPage; i <= range; i++) {
-            int physicalPage = mapping[i];
-            pagesUsed[physicalPage] = false;
-            mapping[i] = -1;
+            int physicalPage = mapping[i].physicalPageNumber;
+            if(physicalPage != -1) {
+                pagesUsed[physicalPage] = false;
+            }
+            mapping[i] = null;
         }
         Hardware.TLBClean();
         return true;
@@ -538,12 +540,14 @@ public class Kernel extends Process  {
      * @param currentlyRunning The current running process.
      */
     public void FreeAllMemory(PCB currentlyRunning) {
-        int[] mapping = currentlyRunning.getMapping();
+        VirtualToPhysicalMapping[] mapping = currentlyRunning.getMapping();
         for(int i = 0; i < mapping.length; i++) {
-            if(mapping[i] != -1) {
-                int physicalPage = mapping[i];
-                pagesUsed[physicalPage] = false;
-                mapping[i] = -1;
+            if(mapping[i] != null) {
+                int physicalPage = mapping[i].physicalPageNumber;
+                if(physicalPage != -1) {
+                    pagesUsed[physicalPage] = false;
+                }
+                mapping[i] = null;
             }
         }
     }

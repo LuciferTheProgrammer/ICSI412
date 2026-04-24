@@ -29,7 +29,9 @@ public class PCB { // Process Control Block
     private List<KernelMessage> messages;
 
     // An array to hold the process' mapping table for its virtual page to physical page mappings.
-    private int[] mapping = new int[100];
+    //private int[] mapping = new int[100];
+
+    private VirtualToPhysicalMapping[] mapping = new VirtualToPhysicalMapping[100];
 
 
     /**
@@ -47,9 +49,6 @@ public class PCB { // Process Control Block
         nextPid++;
         for(int i = 0; i < devIDs.length; i++) {
             devIDs[i] = -1;
-        }
-        for(int i = 0; i < mapping.length; i++) {
-            mapping[i] = -1;
         }
         this.messages = new LinkedList<>();
         this.name = up.getClass().getSimpleName();
@@ -136,7 +135,7 @@ ulp.isStopped() is true.  */
      *
      * @return The mapping table.
      */
-    public int[] getMapping() {
+    public VirtualToPhysicalMapping[] getMapping() {
         return mapping;
     }
 }
