@@ -290,6 +290,36 @@ public class Scheduler {
     public Queue<SleepPCB> getSleepPCBs() {
         return sleepPCBs;
     }
+
+    public PCB getRandomProcess() {
+        ArrayList<PCB> processesToChoose = new ArrayList<>();
+
+        if(currentlyRunning != null) {
+            processesToChoose.add(currentlyRunning);
+        }
+        for(PCB process: realtime) {
+            processesToChoose.add(process);
+        }
+        for(PCB process: background) {
+            processesToChoose.add(process);
+        }
+        for(PCB process: interactive) {
+            processesToChoose.add(process);
+        }
+        for(SleepPCB process: sleepPCBs) {
+            if(process != null && process.getPcb() != null) {
+                PCB pcb = process.getPcb();
+                processesToChoose.add(pcb);
+            }
+        }
+        int length = processesToChoose.size();
+        if(length == 0) {
+            return null;
+        }
+        int randomPick = rand.nextInt(length);
+        PCB result = processesToChoose.get(randomPick);
+        return result;
+    }
 }
 
 

@@ -98,4 +98,11 @@ public class Hardware {
         TLB[0][i] = virtualPage;
         TLB[1][i] = physicalPage;
     }
+    public static byte readPhysicalPage(int address) {
+        byte data = memory[address];
+        return data;
+    }
+    public static void writePhysicalPage(int address, byte value) {
+        memory[address] = value;
+    }
 }

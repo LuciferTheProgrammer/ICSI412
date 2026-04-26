@@ -411,36 +411,39 @@ public class Kernel extends Process  {
         }
         VirtualToPhysicalMapping[] mapping = pcb.getMapping();
         if (virtualPage < 0 || virtualPage >= mapping.length) {
-            System.out.println("seg fault");
-            closeAllDev(pcb);
-            mappingPID.remove(pcb.pid);
-            waiting.remove(pcb.pid);
-            scheduler.currentlyRunningNull();
-            scheduler.SwitchProcess();
+            endProcess(pcb);
             return;
         }
         VirtualToPhysicalMapping slot = mapping[virtualPage];
         if(slot == null) {
-            System.out.println("seg fault");
-            closeAllDev(pcb);
-            mappingPID.remove(pcb.pid);
-            waiting.remove(pcb.pid);
-            scheduler.currentlyRunningNull();
-            scheduler.SwitchProcess();
+            endProcess(pcb);
             return;
         }
         int physicalPage = mapping[virtualPage].physicalPageNumber;
         if(physicalPage == -1) {
-            System.out.println("seg fault");
-            closeAllDev(pcb);
-            mappingPID.remove(pcb.pid);
-            waiting.remove(pcb.pid);
-            scheduler.currentlyRunningNull();
-            scheduler.SwitchProcess();
-            return;
+            physicalPage = searchPhysicalPage();
+            if (physicalPage == -1) {
+                physicalPage = swapPhysicalPage();
+                if (physicalPage == -1) {
+                    endProcess(pcb);
+                    return;
+                }
+                pagesUsed[physicalPage] = true;
+            }
+            slot.physicalPageNumber = physicalPage;
+            if(slot.diskPageNumber != -1) {
+                int address = slot.diskPageNumber * 1024;
+                vfs.Seek(idSwapFile, address);
+                byte[] container = vfs.Read(idSwapFile, 1024);
+                writeDataToPhysicalPage(physicalPage, container);
+
+            }
+            else {
+                clearPage(physicalPage);
+            }
         }
         int randomInt = rand.nextInt(2);
-        Hardware.modifyTLB(virtualPage, physicalPage, randomInt);
+        Hardware.modifyTLB(virtualPage, slot.physicalPageNumber, randomInt);
     }
 
     /**
@@ -550,6 +553,7 @@ public class Kernel extends Process  {
                 mapping[i] = null;
             }
         }
+        Hardware.TLBClean();
     }
 
     /**
@@ -588,5 +592,80 @@ public class Kernel extends Process  {
             case "wait" -> {return waiting;}
         }
         return null;
+    }
+
+    private void endProcess(PCB process) {
+        System.out.println("seg fault");
+        FreeAllMemory(process);
+        closeAllDev(process);
+        mappingPID.remove(process.pid);
+        waiting.remove(process.pid);
+        scheduler.currentlyRunningNull();
+        scheduler.SwitchProcess();
+    }
+
+    private int searchPhysicalPage() {
+        for (int i = 0; i < pagesUsed.length; i++) {
+            if(!pagesUsed[i]) {
+                pagesUsed[i] = true;
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private byte[] copyPhysicalPageData(int page) {
+        int start = page * 1024;
+        byte[] content = new byte[1024];
+        for(int i = 0; i < 1024; i++) {
+            content[i] = Hardware.readPhysicalPage(start + i);
+        }
+        return content;
+    }
+
+    private void writeDataToPhysicalPage(int page, byte[] data) {
+        int start = page * 1024;
+        for(int i = 0; i < 1024; i++) {
+            byte holder = 0;
+            if(data != null && i < data.length) {
+                holder = data[i];
+            }
+            Hardware.writePhysicalPage(start + i, holder);
+        }
+    }
+
+    private void clearPage(int page) {
+        byte zero = (byte) 0;
+        int start = page * 1024;
+        for(int i = 0; i < 1024; i++) {
+            Hardware.writePhysicalPage(start + i, zero);
+        }
+    }
+
+    private int swapPhysicalPage() {
+        while(true) {
+            PCB victimProcess = scheduler.getRandomProcess();
+            if(victimProcess == null) {
+                return -1;
+            }
+            VirtualToPhysicalMapping[] mapping = victimProcess.getMapping();
+            for(int i = 0; i < mapping.length; i++) {
+                VirtualToPhysicalMapping holder = mapping[i];
+                if(holder != null && holder.physicalPageNumber != -1) {
+                    int pageHolder = holder.physicalPageNumber;
+                    if(holder.diskPageNumber == -1) {
+                        holder.diskPageNumber = nextSwap;
+                        nextSwap++;
+                    }
+                    byte[] dataInPage = copyPhysicalPageData(pageHolder);
+                    int addressDisk = holder.diskPageNumber * 1024;
+                    vfs.Seek(idSwapFile, addressDisk);
+                    vfs.Write(idSwapFile, dataInPage);
+                    holder.physicalPageNumber = -1;
+                    Hardware.TLBClean();
+                    return pageHolder;
+                }
+            }
+        }
     }
 }
