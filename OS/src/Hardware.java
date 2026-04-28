@@ -98,10 +98,24 @@ public class Hardware {
         TLB[0][i] = virtualPage;
         TLB[1][i] = physicalPage;
     }
+
+    /**
+     * This function takes in an address and reads data from memory with that specified address, to read the data from the physical page and return it in bytes.
+     *
+     * @param address The address to read data from memory.
+     * @return The data in bytes.
+     */
     public static byte readPhysicalPage(int address) {
         byte data = memory[address];
         return data;
     }
+
+    /**
+     * This function takes in an address and data, where it writes that data in memory for the given address, to write data to the physical page.
+     *
+     * @param address The address to write data to in memory.
+     * @param value The data to write in memory.
+     */
     public static void writePhysicalPage(int address, byte value) {
         memory[address] = value;
     }

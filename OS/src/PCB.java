@@ -28,9 +28,7 @@ public class PCB { // Process Control Block
     // The message queue to store messages of a process.
     private List<KernelMessage> messages;
 
-    // An array to hold the process' mapping table for its virtual page to physical page mappings.
-    //private int[] mapping = new int[100];
-
+    // An array of virtual to physical mapping object data structures of size 100.
     private VirtualToPhysicalMapping[] mapping = new VirtualToPhysicalMapping[100];
 
 

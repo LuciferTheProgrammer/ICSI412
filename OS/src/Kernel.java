@@ -21,8 +21,10 @@ public class Kernel extends Process  {
     // An array to hold the status of pages that are in use and those that are not.
     private boolean[] pagesUsed = new boolean[1024];
 
+    // To store the VFS ID for the opened swap file.
     private int idSwapFile;
 
+    // To track the next available page number in the swap file, where each swap page is 1024 bytes in size.
     private int nextSwap;
 
     /**
@@ -30,7 +32,8 @@ public class Kernel extends Process  {
      * proceeds to create PCB for that process which takes in the process and priority type of the process (currently set to background), and adds the process
      * to correct priority queue. It also creates the mapping for process IDs and their corresponding processes and also the mapping for processes
      * that are blocked and waiting for a message, process IDs and their corresponding processes. Adds all current process IDs and their corresponding
-     * processes to the generic mapping. Also initializes a random object.
+     * processes to the generic mapping. Also initializes a random object. Now opens a swap file and initializes
+     * the swap file page number tracker to 0.
      *
      * @param startup The array instance of UserlandProcess.
      */
@@ -394,13 +397,12 @@ public class Kernel extends Process  {
     }
 
     /**
-     * This function takes in a virtual page. First it gets the current working process,
-     * then gets the mapping array of the process and if the virtual page is out of bounds
-     * from the process' mapping or does not have a physical page mapped for the given virtual page
-     * then it seg faults and the process is terminated and switches to another process. If there
-     * is virtual page to physical page mapping then the function picks randomly between 0 or 1,
-     * using that random integer, as an index to which to modify the TLB which utilizes the given
-     * virtual page and physical page.
+     * This function takes in a virtual page and maps it to a physical page. First, it checks that the virtual page is within valid range boundaries and the process actually has allocated that page.
+     * Then, it also checks if the page currently has an assigned physical page, if there is none then it searches for a free physical page to assign it to. If there is no
+     * free physical page to give, then it swaps it out with another process' page and reuses that same physical page. Furthermore, after the physical page
+     * is given and accounted for, it tries to reload the physical page's old data from the swap file, if it was written to the disk before or it just clears the physical
+     * page by writing zeros to it, which indicates that the data of the physical page has never been written to disk. Finally, it modifies one of the TLB slots with the given
+     * virtual to physical page mapping with the entry being randomly selected.
      *
      * @param virtualPage The virtual page to map to physical page.
      */
@@ -447,15 +449,10 @@ public class Kernel extends Process  {
     }
 
     /**
-     * This function takes in a size. First gets the current working process, computes the
-     * required number of pages to add, gets the process' mapping table (array), searches
-     * the process' (mapping) virtual page table for a big enough hole (consecutive slots with -1's) that could fit
-     * the required number of pages, if there is nothing big enough the allocation fails, then
-     * it starts assigning the physical pages to each virtual page in that big hole, it searches the
-     * first free physical page in memory and if physical memory runs out part way through unassigns
-     * pages and fails. However, if it's a success, then it marks the specific physical page as used
-     * and stores the virtual page to physical page mapping in the processes mapping table. Finally,
-     * it returns the starting virtual address.
+     * This function takes in a size and allocates memory for process based on this size. First, it computes how the number of pages that are required, then looks up the process' mapping table
+     * for a consecutive run of null entries or holes that are large enough to contain the number of pages computed prior. Then, creates a virtual to physical mapping
+     * object data structure for each one of the allocated virtual page. In addition, the physical pages aren't assigned here, they are assigned and called for later on GetMapping().
+     * Finally, returns the starting virtual address.
      *
      * @param size The size to allocate in memory.
      * @return The starting virtual address.
@@ -492,15 +489,10 @@ public class Kernel extends Process  {
     }
 
     /**
-     * This function takes a pointer to an address and block size in memory. First,
-     * it gets the current running process, computes its virtual page and number of physical pages to free.
-     * Then, retrieves the process' mapping table, computes the range, the last virtual page.
-     * If the starting virtual page number and last virtual page number are not within the bounds of
-     * mapping table, then returns false. If it is, then uses the starting virtual page and
-     * last virtual page as bounds in which to get the corresponding physical page for each virtual
-     * page and set the physical page as not used (free) in the free list and also setting the corresponding
-     * mapping table entries to -1 as a way to remove these virtual page to physical page mappings in the process.
-     * Finally, cleans/reinitializes the TLB and returns true upon success.
+     * This function takes a pointer to an address and block size in memory, where it only frees a certain range of memory for the given process. First,
+     * it checks that the requested virtual pages are within the correct boundaries and were actually allocated. Then, for each
+     * allocated page, it frees the physical page only if it exists or there is one present, sets the virtual to physical mapping slot to null and also
+     * clears the TLB and returns true if the memory was successfully freed.
      *
      * @param pointer The pointer or start in memory to free.
      * @param size The size in memory to free.
@@ -535,10 +527,8 @@ public class Kernel extends Process  {
     }
 
     /**
-     * This function takes in a current running process and gets its mapping table. Then, it
-     * proceeds to get the physical page for each of its virtual page to physical page mappings.
-     * where it sets these entries to -1, removing the mappings and while marking those
-     * physical pages as not used (free) in the free list array.
+     * This function takes in a current running process and gets its mapping table. Then it checks each of its of virtual to physical mapping
+     * slot, where it frees the physical page if one there is one present. Finally, sets the mapping entry to null and clears the TLB.
      *
      * @param currentlyRunning The current running process.
      */
@@ -594,6 +584,13 @@ public class Kernel extends Process  {
         return null;
     }
 
+    /**
+     * This is a helper function for GetMapping(), from when a process terminates prematurely aka it
+     * prints seg fault, closes all memory resources and devices used by the process. Also removes the process
+     * from the mapping and waiting structures, sets the process to null and switches to another process.
+     *
+     * @param process The process to end.
+     */
     private void endProcess(PCB process) {
         System.out.println("seg fault");
         FreeAllMemory(process);
@@ -604,6 +601,11 @@ public class Kernel extends Process  {
         scheduler.SwitchProcess();
     }
 
+    /**
+     * This function looks into the pages used array and searches for a page that is not in use, a free page, and returns that page.
+     *
+     * @return a free page.
+     */
     private int searchPhysicalPage() {
         for (int i = 0; i < pagesUsed.length; i++) {
             if(!pagesUsed[i]) {
@@ -614,6 +616,12 @@ public class Kernel extends Process  {
         return -1;
     }
 
+    /**
+     * This function takes a physical page and copies its data/reads it to a container in bytes.
+     *
+     * @param page The physical page to copy data from.
+     * @return The copied data.
+     */
     private byte[] copyPhysicalPageData(int page) {
         int start = page * 1024;
         byte[] content = new byte[1024];
@@ -623,6 +631,12 @@ public class Kernel extends Process  {
         return content;
     }
 
+    /**
+     * This function takes a physical page and corresponding data, where it writes that data into the physical page.
+     *
+     * @param page The physical page to write the data to.
+     * @param data The data to write to the physical page.
+     */
     private void writeDataToPhysicalPage(int page, byte[] data) {
         int start = page * 1024;
         for(int i = 0; i < 1024; i++) {
@@ -634,6 +648,11 @@ public class Kernel extends Process  {
         }
     }
 
+    /**
+     * This function takes in a physical page and writes zeros to it, clears it of its contents.
+     *
+     * @param page The physical page to clear.
+     */
     private void clearPage(int page) {
         byte zero = (byte) 0;
         int start = page * 1024;
@@ -642,6 +661,13 @@ public class Kernel extends Process  {
         }
     }
 
+    /**
+     * This function picks a random process, then looks up that process' virtual to physical mapping table for a specific page that is currently in physical memory. Then writes
+     * that physical page's 1024 bytes of data to a swap file, followed by updating the victim process' mapping to indicate that the page is now on disk and finally returns
+     * the freed physical page number.
+     *
+     * @return The freed physical page number.
+     */
     private int swapPhysicalPage() {
         while(true) {
             PCB victimProcess = scheduler.getRandomProcess();

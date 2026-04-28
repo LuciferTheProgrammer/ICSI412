@@ -291,6 +291,13 @@ public class Scheduler {
         return sleepPCBs;
     }
 
+
+    /**
+     * This function creates a list, where it adds all stored processes which includes the current process, the queued process from realtime, background, interactive, and
+     * sleeping processes. Then randomly selects a process from all stored processes in the list to return.
+     *
+     * @return The randomly selected process.
+     */
     public PCB getRandomProcess() {
         ArrayList<PCB> processesToChoose = new ArrayList<>();
 
