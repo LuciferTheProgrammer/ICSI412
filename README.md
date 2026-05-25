@@ -1,4 +1,5 @@
 # ICSI412 - Operating Systems
+Applications are contained in the OS folder
 
 This repository contains a Java-based operating system simulation project created for an Operating Systems course. The project implements several core OS concepts, including process management, scheduling, kernel calls, inter-process communication, device handling, virtual file systems, memory management, virtual memory, paging, and swapping.
 
